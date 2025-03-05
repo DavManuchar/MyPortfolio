@@ -1,224 +1,272 @@
-from pathlib import Path
+import tkinter as tk
+import random
+from PIL import Image, ImageTk
+from tkinter import Canvas
 import pygame
-import math
+from porc import *
 import random
 
-current_dir = Path(__file__).parent
+root = tk.Tk()
+root.title("Sopyor")
+root.geometry("500x600")
+root.resizable(False,False)
+
 
 pygame.init()
-pygame.mixer.init()
 
+canvas = Canvas(bg="#4a752c",highlightthickness=0, width=500, height=600)
+canvas.place(x=0, y=0)
 
-width, height = 800, 800
-
-screen = pygame.display.set_mode((width,height))
-
-MAP_WIDTH, MAP_HEIGHT = 4000, 4000
-map = pygame.image.load(str(current_dir / "img" / "map1.jpg"))
-
-cars = ["car1", "car2", "car3", "car4", "car5", "car6"]
-
-car = pygame.image.load(str(current_dir / "img" / "cars" / "car1.png"))
-img_x, img_y = car.get_size()
-
-car = pygame.transform.scale(car, (img_x, img_y))
-
-rule = pygame.image.load(str(current_dir / "img" / "rule.png"))
-rule = pygame.transform.scale(rule, (200, 200))
-
-# r = pygame.image.load(str(current_dir / "img" / "r.png"))
-# d = pygame.image.load(str(current_dir / "img" / "d.png"))
-# go_to = 0
-
-x, y = 1460, 835
-angle = 0 
-speed = 4
-down = 0
-turn = 0
-
-right_left = 0
-
-bots = []
-
-class Bot:
-  def __init__(self, img, cord, direction):
-    self.img = img
-    self.cord = cord
-    self.direction = direction
-    
-  def travel(self):
-    self.cord[1] -= 3
-    
-  def travel_down(self):
-    self.cord[1] += 3
-    
-BOT_TIMER = pygame.USEREVENT + 1
-
-pygame.time.set_timer(BOT_TIMER, 2000)
-
+cliks = 0
+bold = []
+game = True
 run = True
-while run == True:
-  pygame.time.delay(10) 
 
-  for event in pygame.event.get():
-    if event.type == pygame.QUIT:
-      run = False
-        
-    if event.type == BOT_TIMER:
-      bots.append(Bot(random.choice(cars), [300, 800], 0))
-      bots.append(Bot(random.choice(cars), [160, 0], 1))
-    
-    if event.type == pygame.KEYDOWN:
-      if event.key == pygame.K_UP:
-        speed = 0
-        
-      if event.key == pygame.K_DOWN:
-        down = 0
-        
-                        
-  keys = pygame.key.get_pressed()
-  if keys[pygame.K_RIGHT] or keys[pygame.K_LEFT]:
-    right_left = 1 if keys[pygame.K_RIGHT] else 2
-    if keys[pygame.K_LEFT]:
-      turn += 0.05
-      turn = min(turn, 1.5)
-    if keys[pygame.K_RIGHT]:
-      turn -= 0.05
-      turn = max(turn, -1.5)
-  if keys[pygame.K_UP] and y > 0 and y < MAP_HEIGHT and x < MAP_WIDTH: 
-    if not keys[pygame.K_RIGHT] and not keys[pygame.K_LEFT]:
-      if right_left == 1:
-        turn += 0.05
-        turn = min(turn, 0)
-      elif right_left == 2:
-        turn -= 0.05
-        turn = max(turn, 0)
-      
-    speed += 0.05
-    speed = min(speed, 4)
-    rad = math.radians(angle)  
-    if x >= 0:
-      if angle == 270:
-        x -= speed * math.sin(rad)
-        angle += turn
-      elif angle == 180:
-        y -= speed * math.cos(rad)
-        angle += turn
-      elif angle == 90:
-        x -= speed * math.sin(rad)
-        angle += turn
-      elif angle == 0:
-        y -= speed * math.cos(rad)
-        angle += turn
-      else:
-        x -= speed * math.sin(rad)
-        y -= speed * math.cos(rad)
-        angle += turn
-      if keys[pygame.K_LEFT]:  
-          angle += turn
-          if angle > 360:
-            angle = 0
-      if keys[pygame.K_RIGHT]:
-          angle += turn
-          if angle < 0:
-            angle = 360
-      # print(x, y)
-  if keys[pygame.K_DOWN] and y > 0 and y < MAP_HEIGHT and x < MAP_WIDTH :
-    if not keys[pygame.K_RIGHT] and not keys[pygame.K_LEFT]:
-      if right_left == 1:
-        turn += 0.1
-        turn = min(turn, 0)
-      elif right_left == 2:
-        turn -= 0.1
-        turn = max(turn, 0)
-      
-    down += 0.05
-    down = min(down, 2)
-    rad = math.radians(angle)  
-    if angle == 270:
-      x += down * math.sin(rad)
-      angle -= turn
-    elif angle == 180:
-      y += down * math.cos(rad)
-      angle -= turn
-    elif angle == 90:
-      x += down * math.sin(rad)
-      angle -= turn
-    elif angle == 0:
-      y += down * math.cos(rad)
-      angle -= turn
-    else:
-      x += down * math.sin(rad)
-      y += down * math.cos(rad)
-      angle -= turn
-    if keys[pygame.K_LEFT] :  
-      angle -= turn
-      if angle < 0:
-          angle = 360
-    if keys[pygame.K_RIGHT] :
-        angle -= turn
-        if angle > 360:
-          angle = 0
-            
+was = []
+place_count = 0
+
+matrix = [[0 for _ in range(10)] for _ in range(10)]
+
+def pos(x, y):
+  global running
+  running = True
+  update_timer()
+  click_pos = find_neighbors(matrix, x, y)
   
-  if x > 400 and x < MAP_WIDTH - 400:    
-    offset_x = x - width // 2
-  if y > 400 and y < MAP_HEIGHT - 400 :
-    offset_y = y - height // 2
+  i = 0
+  while i < 20:
+    m = random.randint(0, 9)
+    n = random.randint(0, 9)
 
-  screen.blit(map, (-offset_x, -offset_y))
-     
-  # for b in bots:
-  #   img = b.img
-  #   if b.direction == 0:
-  #     bot_car = pygame.image.load(str(current_dir / "img" / "cars" / f"{img}.png"))
-  #     screen.blit(bot_car, (b.cord[0], b.cord[1]))  
-  #     b.travel()
-  #   elif b.direction == 1:
-  #     bot_car = pygame.image.load(str(current_dir / "img" / "cars" / f"{img}.png"))
-  #     rotated_bot = pygame.transform.rotate(bot_car, 180)
-  #     rect = rotated_bot.get_rect(center=(b.cord[0], b.cord[1]))
-  #     screen.blit(rotated_bot, rect.topleft)  
-  #     b.travel_down()
-  #   if b.cord[1] + 150 < 0 or b.cord[1] - 150 > 800:
-  #     bots.remove(b)
+    if matrix[m][n] == 0 and (m, n) not in click_pos:
+        matrix[m][n] = 1
+        i += 1
+  zero((x, y))
+  
+
+
+def start():
+  if game == True:
+    global flag_photo, time_photo, t, current_time, timer
     
-         
-  rotated_car = pygame.transform.rotate(car, angle)
-  rect = rotated_car.get_rect(center=(width // 2, width // 2))
-
-  if y > 400 and x > 400 and y < MAP_HEIGHT - 400 and x < MAP_WIDTH - 400:  
-    screen.blit(rotated_car, rect)
+    flag_image_path = "C:/py/sopyor/img/flag.png"
+    flag_img = Image.open(flag_image_path).resize((60, 60))
+    flag_photo = ImageTk.PhotoImage(flag_img)
+    canvas.create_image(100, 20, anchor="nw", image=flag_photo)
+    
+    t = canvas.create_text(180,50, text=20, fill="white",anchor="center", font=('Helvetica', 20, "bold"))
+    
+    time_image_path = "C:/py/sopyor/img/time.png"
+    time_img = Image.open(time_image_path).resize((60, 60))
+    time_photo = ImageTk.PhotoImage(time_img)
+    canvas.create_image(300, 20, anchor="nw", image=time_photo)
+    
+    current_time = 0
+    
+    timer = canvas.create_text(380,50, text=str(current_time), fill="white",anchor="center", font=('Helvetica', 20, "bold"))
+    
+    
+    col = 0
+    w = 0
+    h = 100
+    id = 0
+    for i in range(10):
+      col = 1 if col == 0 else 0
+      for j in range(10):
+        if col == 0:
+          a = canvas.create_rectangle(w,h,w+50,h+50, fill="#aad751", outline="")
+          text = canvas.create_text(w+25,h+25, text="", fill="red",anchor="center", font=('Helvetica', 15, "bold"))
+          
+          col = 1
+  
+        else:
+          a = canvas.create_rectangle(w,h,w+50,h+50, fill="#a2d149", outline="")
+          text = canvas.create_text(w+25,h+25, text="", fill="red",anchor="center", font=('Helvetica', 15, "bold"))
+          z = f"({i},{j})"
+          z = eval(z)
+          bold.append(z)
+          col = 0
+          
+        tag = (f"({i},{j})")
+        tag_text = (f"{i}_{j}")
+        canvas.itemconfig(a, tags=tag)
+        canvas.itemconfig(text, tags=tag_text)
+  
+        canvas.tag_bind(tag, "<Button-1>", lambda event, t=tag: on_rectangle_click(event, t))
+        canvas.tag_bind(tag, "<Button-3>", lambda event, t=tag: flag(event, t))
+              
+          
+        w += 50
+      h += 50
+      w = 0
+      
   else:
-    if y > 400 and y < MAP_HEIGHT - 400 and x < MAP_WIDTH - 400:
-      rect = rotated_car.get_rect(center=(x, 400))
-      screen.blit(rotated_car, rect)
-    elif y < 400 and x > 400 and x < MAP_WIDTH - 400:
-      rect = rotated_car.get_rect(center=(400, y))
-      screen.blit(rotated_car, rect)
-    elif y > MAP_HEIGHT - 400 and x < 400:
-      rect = rotated_car.get_rect(center=(x, y - (800 * 4)))
-      screen.blit(rotated_car, rect)
-    elif y > MAP_HEIGHT - 400 and x > 400 and x < MAP_WIDTH - 400:
-      rect = rotated_car.get_rect(center=(400, y - (800 * 4)))
-      screen.blit(rotated_car, rect)
-    elif x > MAP_WIDTH - 400 and y > 400 and y < MAP_HEIGHT - 400:
-      rect = rotated_car.get_rect(center=(x - (800 * 4), 400))
-      screen.blit(rotated_car, rect)
-    elif x > MAP_WIDTH - 400 and y < 400:
-      rect = rotated_car.get_rect(center=(x - (800 * 4), y))
-      screen.blit(rotated_car, rect)
-    elif x > MAP_WIDTH - 400 and y > MAP_HEIGHT - 400:
-      rect = rotated_car.get_rect(center=(x - (800 * 4), y - (800 * 4)))
-      screen.blit(rotated_car, rect)
-    else:
-      rect = rotated_car.get_rect(center=(x, y))
-      screen.blit(rotated_car, rect)
-      
-  rotated_rule = pygame.transform.rotate(rule, turn*150)
-  rec = rotated_rule.get_rect(center=(650, 650))
-      
-  screen.blit(rotated_rule, rec)
-  # screen.blit(d if go_to == 0 else r, (600, 400))
+    col = 0
+    w = 0
+    h = 100
+    for i in range(10):
+      col = 1 if col == 0 else 0
+      for j in range(10):
+        if col == 0:
+          a = canvas.create_rectangle(w,h,w+50,h+50, fill="#e5c29f", outline="")        
+          col = 1
+        else:
+          a = canvas.create_rectangle(w,h,w+50,h+50, fill="#d7b899", outline="")
+          col = 0    
+        w += 50
+      h += 50
+      w = 0
+    text = canvas.create_text(250,300, text="Victory", fill="red",anchor="center", font=('Helvetica', 35, "bold"))
+  
+def update_timer():
+    global current_time
 
-  pygame.display.update()
+    if running == True:
+      current_time += 1
+      
+      canvas.itemconfig(timer, text=str(current_time))
+  
+      canvas.after(1000, update_timer)
+  
+def flag(event, cord):
+    point = eval(cord)
+    tag = f"({point[0]},{point[1]})"
+    tag_text = f"{point[0]}_{point[1]}"
+        
+    text = canvas.find_withtag(tag_text)
+    canvas.itemconfig(text, text="<|", fill="red")
+  
+def find_bombs(matrix, x, y):
+  neigh = find_neighbors(matrix, x, y)
+  count = 0
+  
+  for point in neigh:
+    if matrix[point[0]][point[1]] == 1:
+      count += 1
+      
+  return count
+      
+    
+def zero(cord):
+  global cliks, place_count, game, running
+  all_points = find_connected_zeros(matrix, cord)
+  
+  for i in range(len(all_points)):
+    place_count += 1
+    point = all_points[i]
+    tag = f"({point[0]},{point[1]})"
+    tag_text = f"{point[0]}_{point[1]}"
+        
+    rectangles = canvas.find_withtag(tag)
+    text = canvas.find_withtag(tag_text)
+    canvas.tag_unbind(tag, "<Button-1>")
+    tag = eval(tag)
+    if tag not in was:
+      was.append(tag)
+      cliks += 1
+    if cliks == 80:
+      game = False
+      running = False
+      start()
+    for rect in rectangles:
+      bombs = find_bombs(matrix, point[0], point[1])
+      if tag in bold:
+        if bombs == 0:
+          canvas.itemconfig(rect, fill="#d7b899")
+          canvas.itemconfig(text, text="")
+          
+        else:
+          canvas.itemconfig(rect, fill="#d7b899")
+          place_number(bombs, text)
+            
+      else:
+        if bombs == 0:
+          canvas.itemconfig(rect, fill="#e5c29f")
+          canvas.itemconfig(text, text="")
+        else:
+          canvas.itemconfig(rect, fill="#e5c29f")
+          place_number(bombs, text)
+  print(cliks)
+  
+def place_number(bombs, text):
+  if bombs == 1: 
+    canvas.itemconfig(text, text=bombs, fill="#1976d2")
+  elif bombs == 2: 
+    canvas.itemconfig(text, text=bombs, fill="#388e3c")
+  elif bombs == 3: 
+    canvas.itemconfig(text, text=bombs, fill="#d32f2f")
+  elif bombs == 4: 
+    canvas.itemconfig(text, text=bombs, fill="#7b1fa2")
+  elif bombs == 5: 
+    canvas.itemconfig(text, text=bombs, fill="red")
+  elif bombs == 5: 
+    canvas.itemconfig(text, text=bombs, fill="black")
+
+def press(point):
+  global cliks, place_count, game, run, running
+  if run == True:
+    
+    bombs = find_bombs(matrix, point[0], point[1])
+    if bombs == 0:
+      zero((point[0], point[1]))
+    else:
+      place_count += 1
+      tag = f"({point[0]},{point[1]})"
+      tag_text = f"{point[0]}_{point[1]}"
+          
+      rectangles = canvas.find_withtag(tag)
+      text = canvas.find_withtag(tag_text)
+      canvas.tag_unbind(tag, "<Button-1>")
+      tag = eval(tag)
+      if tag not in was:
+        was.append(tag)
+        cliks += 1
+      if cliks == 80:
+        game = False
+        running = False
+        start()
+      print(cliks)
+      if tag in bold:
+        if bombs == 0:
+          canvas.itemconfig(rectangles, fill="#d7b899")
+          canvas.itemconfig(text, text="")
+        else:
+          canvas.itemconfig(rectangles, fill="#d7b899")
+          place_number(bombs, text)      
+      else:
+        if bombs == 0:
+          canvas.itemconfig(rectangles, fill="#e5c29f")
+          canvas.itemconfig(text, text="")
+        else:
+          canvas.itemconfig(rectangles, fill="#e5c29f")
+          place_number(bombs, text)
+
+def bomb(tag):
+  global running, run
+  if run == True:
+    tag_text = f"{tag[1]}_{tag[3]}"
+    text = canvas.find_withtag(tag_text)
+    canvas.itemconfig(tag, fill="black")
+    canvas.itemconfig(text, text="*", fill="white")
+    running = False
+    run = False
+
+def on_rectangle_click(event, tag):
+  
+  cordinate = eval(tag)
+  
+  if cliks == 0:
+    pos(cordinate[0], cordinate[1])
+  else:
+    if matrix[cordinate[0]][cordinate[1]] == 0:
+      press(cordinate)
+    else:
+      bomb(tag)
+  
+
+
+
+if __name__ == "__main__":
+  start()
+
+root.mainloop()
